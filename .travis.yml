@@ -34,14 +34,16 @@ script:
   - echo "Built by Travis CI:" >release-archives/README.txt
   - echo "https://travis-ci.org/emutos/emutos/builds/$TRAVIS_BUILD_ID" >>release-archives/README.txt
   - echo >>release-archives/README.txt
-  - git log --name-status $LOG_RANGE -- >>release-archives/README.txt
+  - git log --name-status $TRAVIS_COMMIT -- >>release-archives/README.txt
   # Display resulting tree
   - ls -l release-archives
 
 deploy:
   skip_cleanup: true
-  provider: script
-  script: .travis/deploy.sh
+  provider: releases
+  api_key:
+    secure: FCO2YMnZpVF7dzMC9w+aX0Wf44uyThplY3QG5vIr2vDPmCV5NBDbG9a/WZaA1RQsbtcNWFbJYvulPMlu7hR+4LHbQLmjz9XtIH1KQ5qSFn2WieUBiCF+NciukBp3d2kcFiHpm2pJ+DPaRt95S7FyurhStGy0BJus7j+qU0F8eScMQFJ/FUI+NeY2yYLMm6AF20TvcZkZhYbp56f46epki9HHgsWxpW2aMHJ8/HvRcxB4q0cdx8J21lu1LqwbPHeKx0bOENciM1tn8L44z1Gu3fWLsSm/GSWwVB80VIKBEZAnbokiKNzflb2c4r+TIOZyCEsNS6qGGZyfuWJeEw79PDLRHbsNcgYDj2W3y1ASFgCAx9Ad1DOeG0Et/+qw/LceGKG1aegoJn8hx15vjWb74evMCJg7/KVZBmbUD1/bj1wpuZIGRUI0NYKfo6qNEf0zph4MiAVTRNeN21zK+9amlKC2xs6DE/hmep6X9CwbDFGNgbqUij43dX/VE8x7sRST4Sg3upiGktubqOk5Yxwq1JU1MTbh9aJ3B4PcSkFkJbUsowndonB/Wx+Utepa1fyReLRp4TtDeVU8AhjYl7+8zl7MgUutGAPusl7Z364eWY3d+8Q3OHvue0vNiGQpE9ZBMfQcTherz7Mia0asjRQF52bSmvJEUY/L5eFfLIT1O5o=
+  file_glob: true
+  file: release-archives/*
   on:
-    repo: emutos/emutos
-    branch: master
+    tags: true
