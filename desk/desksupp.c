@@ -224,8 +224,21 @@ void do_xyfix(WORD *px, WORD *py)
 /*
  * open a window, normally corresponding to a disk drive icon on the desktop
  *
- * if curr == 0, there is no corresponding screen object, so we do not
- * do the zoom effect & we do not try to reset the object state
+ * if curr == 0, there is no 'source' screen object from which the new
+ * object is coming, so we do not do the zoom effect & we do not try to
+ * reset the object state.
+ *
+ * if curr != 0, there *is* a source object: we always do the zoom effect,
+ * and change the object state, but we only redraw the object when we are
+ * opening a new window.  otherwise, we must be showing the new data in
+ * an existing window: the FNODE for the 'source' object has already been
+ * freed via pn_close(), but would be needed for the redraw because:
+ *  . in text mode, a redraw will cause the userdef code for text display
+ *    to access the FNODE corresponding to the source object
+ *  . in icon mode, a redraw will use the name from the FNODE as the icon
+ *    name.
+ * if we did allow a redraw, at best the display would show the wrong
+ * values (or garbage) briefly; at worst, the desktop would crash.
  */
 void do_wopen(WORD new_win, WORD wh, WORD curr, WORD x, WORD y, WORD w, WORD h)
 {
@@ -246,7 +259,7 @@ void do_wopen(WORD new_win, WORD wh, WORD curr, WORD x, WORD y, WORD w, WORD h)
         }
 
         graf_growbox(d.g_x, d.g_y, d.g_w, d.g_h, x, y, w, h);
-        act_chg(G.g_cwin, G.g_screen, G.g_croot, curr, &c, SELECTED, FALSE, TRUE, TRUE);
+        act_chg(G.g_cwin, G.g_screen, G.g_croot, curr, &c, SELECTED, FALSE, new_win?TRUE:FALSE, TRUE);
     }
 
     if (new_win)
@@ -356,50 +369,19 @@ WORD do_diropen(WNODE *pw, WORD new_win, WORD curr_icon,
                 BYTE *pathname, GRECT *pt, WORD redraw)
 {
     WORD ret;
-    BYTE *p;
     PNODE *tmp;
 
     /* convert to hourglass */
     graf_mouse(HGLASS, NULL);
 
-    p = filename_start(pathname);
-    *p = '\0';
-    ret = set_default_path(pathname);
-    if (ret != 0)
-    {
-#if CONF_WITH_DESKTOP_SHORTCUTS
-        /* handle renamed target of shortcut */
-        if ((pw->w_flags&WN_DESKTOP) && (ret == EPTHNF))
-            remove_locate_shortcut(curr_icon);
-#endif
-        graf_mouse(ARROW, NULL);
-        return FALSE;
-    }
-    strcpy(p,"*.*");
-
     /* open a path node */
     tmp = pn_open(pathname, F_SUBDIR);
-    if (tmp == NULL)
+    if (tmp == NULL)    /* program bug - there is one PNODE for every WNODE */
     {
+        KDEBUG(("No path node available for window\n"));
         graf_mouse(ARROW, NULL);
         return FALSE;
     }
-
-#if CONF_WITH_DESKTOP_SHORTCUTS
-    /* handle opening directory on the desktop */
-    if (pw->w_flags&WN_DESKTOP)
-    {
-        pw = win_alloc(curr_icon);
-        if (!pw)
-        {
-            graf_mouse(ARROW, NULL);
-            fun_alert(1, STNOWIND);
-            return FALSE;
-        }
-        pt = (GRECT *)&G.g_screen[pw->w_root].ob_x;
-    }
-#endif
-
     pw->w_path = tmp;
 
     /* activate path by search and sort of directory */
@@ -846,6 +828,7 @@ WORD do_dopen(WORD curr)
 void do_fopen(WNODE *pw, WORD curr, BYTE *pathname, WORD redraw)
 {
     GRECT t;
+    WORD junk, keystate, new_win = FALSE;
     BYTE app_path[MAXPATHLEN];
 
     wind_get_grect(pw->w_id, WF_WXYWH, &t);
@@ -857,17 +840,62 @@ void do_fopen(WNODE *pw, WORD curr, BYTE *pathname, WORD redraw)
         return;
     }
 
-    strcpy(app_path,pathname);
-    if (strlen(app_path) >= LEN_ZPATH)
+    if (strlen(pathname) >= LEN_ZPATH)
     {
         fun_alert(1, STDEEPPA);
-        remove_one_level(app_path);         /* back up one level */
+        return;
     }
 
-    if (!(pw->w_flags&WN_DESKTOP))          /* folder in window, not on desktop */
-        pn_close(pw->w_path);
+    strcpy(app_path, pathname);
 
-    do_diropen(pw, (pw->w_flags&WN_DESKTOP)?TRUE:FALSE, curr, app_path, &t, redraw);
+#if CONF_WITH_DESKTOP_SHORTCUTS
+    if (pw->w_flags & WN_DESKTOP)
+    {
+        /*
+         * handle renamed target of shortcut
+         */
+        BYTE *p = filename_start(app_path);
+        *p = '\0';
+        if (set_default_path(app_path) == EPTHNF)
+        {
+            remove_locate_shortcut(curr);
+            return;
+        }
+        strcpy(p,"*.*");
+        new_win = TRUE;
+    }
+    else
+#endif
+    {
+        graf_mkstate(&junk, &junk, &junk, &keystate);
+        if (keystate & MODE_ALT)
+            new_win = TRUE;
+    }
+
+    /*
+     * if we are opening a folder on the desktop, or holding down the Alt
+     * key when opening a folder in a window, we need to create a new window
+     */
+    if (new_win)
+    {
+        pw = win_alloc(curr);
+        if (!pw)
+        {
+            fun_alert(1, STNOWIND);
+            return;
+        }
+        rc_copy((GRECT *)&G.g_screen[pw->w_root].ob_x,&t);
+    }
+    else
+    {
+        pn_close(pw->w_path);
+    }
+
+    if (!do_diropen(pw, new_win, curr, app_path, &t, redraw))
+    {
+        if (new_win)
+            win_free(pw);
+    }
 }
 
 
@@ -908,30 +936,6 @@ static BOOL add_one_level(BYTE *pathname,BYTE *folder)
 
 
 /*
- *  Removes the lowest level of folder from a pathname, assumed
- *  to be of the form:
- *      D:\X\Y\Z\F.E
- *  where X,Y,Z are folders and F.E is a filename.  In the above
- *  example, this would change D:\X\Y\Z\F.E to D:\X\Y\F.E
- */
-void remove_one_level(BYTE *pathname)
-{
-    BYTE *stop = pathname+2;    /* the first path separator */
-    BYTE *filename, *prev;
-
-    filename = filename_start(pathname);
-    if (filename-1 <= stop)     /* already at the root */
-        return;
-
-    for (prev = filename-2; prev >= stop; prev--)
-        if (*prev == '\\')
-            break;
-
-    strcpy(prev+1,filename);
-}
-
-
-/*
  *  Open an icon
  */
 WORD do_open(WORD curr)
@@ -942,10 +946,6 @@ WORD do_open(WORD curr)
     WORD isapp;
     BYTE pathname[MAXPATHLEN];
     BYTE filename[LEN_ZFNAME];
-    BYTE *pathptr, *fileptr;
-
-    MAYBE_UNUSED(pathname);
-    MAYBE_UNUSED(filename);
 
     pa = i_find(G.g_cwin, curr, &pf, &isapp);
     if (!pa)
@@ -975,24 +975,22 @@ WORD do_open(WORD curr)
                 strcpy(filename, p);
             }
             strcat(pathname, "\\*.*");
-            pathptr = pathname;
-            fileptr = filename;
         }
         else
 #endif
         {
-            pathptr = pw->w_path->p_spec;
-            fileptr = pf->f_name;
+            strcpy(pathname, pw->w_path->p_spec);
+            strcpy(filename, pf->f_name);
         }
 
         if (pa->a_type == AT_ISFILE)
-            return do_aopen(pa, isapp, curr, pathptr, fileptr, NULL);
+            return do_aopen(pa, isapp, curr, pathname, filename, NULL);
 
         /* handle opening a folder */
-        if (add_one_level(pathptr, fileptr))
+        if (add_one_level(pathname, filename))
         {
             pw->w_cvrow = 0;        /* reset slider */
-            do_fopen(pw, curr, pathptr, TRUE);
+            do_fopen(pw, curr, pathname, TRUE);
         }
         else
             fun_alert(1, STDEEPPA);

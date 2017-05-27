@@ -396,6 +396,30 @@ static void fun_full_close(WNODE *pw)
 
 
 /*
+ *  Removes the lowest level of folder from a pathname, assumed
+ *  to be of the form:
+ *      D:\X\Y\Z\F.E
+ *  where X,Y,Z are folders and F.E is a filename.  In the above
+ *  example, this would change D:\X\Y\Z\F.E to D:\X\Y\F.E
+ */
+static void remove_one_level(BYTE *pathname)
+{
+    BYTE *stop = pathname+2;    /* the first path separator */
+    BYTE *filename, *prev;
+
+    filename = filename_start(pathname);
+    if (filename-1 <= stop)     /* already at the root */
+        return;
+
+    for (prev = filename-2; prev >= stop; prev--)
+        if (*prev == '\\')
+            break;
+
+    strcpy(prev+1,filename);
+}
+
+
+/*
  * full or partial close of desktop window
  */
 void fun_close(WNODE *pw, WORD closetype)
@@ -438,15 +462,40 @@ void fun_close(WNODE *pw, WORD closetype)
 }
 
 
+/*
+ * builds the full pathname corresponding to the first selected file
+ * in the specified PNODE
+ *
+ * returns FALSE if no file is selected (probable program bug)
+ */
+static BOOL build_selected_path(PNODE *pn, BYTE *pathname)
+{
+    FNODE *fn;
+
+    for (fn = pn->p_flist; fn; fn = fn->f_next)
+    {
+        if (fnode_is_selected(fn))
+            break;
+    }
+    if (!fn)
+        return FALSE;
+
+    strcpy(pathname,pn->p_spec);
+    add_fname(pathname,fn->f_name);
+    return TRUE;
+}
+
 
 /*
  *  Routine to call when several icons have been dragged from a
  *  window to another window (it might be the same window) and
  *  dropped on a particular icon or open space.
  *
- *  Note that, for DESK1, this is NEVER called if either the source
- *  or destination is the desktop.  Therefore 'datype' can ONLY be
- *  AT_ISFILE or AT_ISFOLD.
+ *  This can be invoked when copying/moving files, or when launching
+ *  a program via drag-and-drop.
+ *
+ *  Note that this is NEVER called if either the source or destination
+ *  is the desktop.  Thus 'datype' can ONLY be AT_ISFILE or AT_ISFOLD.
  */
 static void fun_win2win(WORD src_wh, WORD dst_wh, WORD dst_ob, WORD keystate)
 {
@@ -465,7 +514,24 @@ static void fun_win2win(WORD src_wh, WORD dst_wh, WORD dst_ob, WORD keystate)
         return;
 
     pda = i_find(dst_wh, dst_ob, &pdf, NULL);
-    datype = (pda) ? pda->a_type : AT_ISFILE;
+
+    if (pda)
+    {
+        if (pda->a_aicon >= 0)      /* dropping file on to an application */
+        {
+            if (build_selected_path(psw->w_path, destpath))
+            {
+                /* set global so desktop will exit if do_aopen() succeeds */
+                exit_desktop = do_aopen(pda, 1, dst_ob, pdw->w_path->p_spec, pdf->f_name, destpath);
+                return;
+            }
+        }
+        datype = pda->a_type;
+    }
+    else
+    {
+        datype = AT_ISFILE;
+    }
 
     /* set up default destination path name */
     strcpy(destpath, pdw->w_path->p_spec);
@@ -508,29 +574,19 @@ static WORD fun_file2desk(PNODE *pn_src, WORD icontype_src, ANODE *an_dest, WORD
         switch(an_dest->a_type)
         {
 #if CONF_WITH_DESKTOP_SHORTCUTS
-        FNODE *fn;
         BYTE tail[MAXPATHLEN];
 
         case AT_ISFILE:     /* dropping something onto a file */
             if (an_dest->a_aicon < 0)       /* is target a program? */
                 break;                      /* no, do nothing */
 
-            /* look for the first (or only) selected file */
-            for (fn = pn_src->p_flist; fn; fn = fn->f_next)
-            {
-                if (fnode_is_selected(fn))
-                    break;
-            }
-            if (!fn)                        /* "can't happen" */
+            /* build the full tail to pass to the target program */
+            if (!build_selected_path(pn_src,tail))
                 break;
 
             /* build pathname for do_aopen() */
             strcpy(pathname,an_dest->a_pdata);
             strcpy(filename_start(pathname),"*.*");
-
-            /* build the full tail to pass to the target program */
-            strcpy(tail,pn_src->p_spec);
-            add_fname(tail,fn->f_name);
 
             /* set global so desktop will exit if do_aopen() succeeds */
             exit_desktop = do_aopen(an_dest, 1, dobj, pathname, an_dest->a_pappl, tail);
