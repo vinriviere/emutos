@@ -28,7 +28,9 @@ before_install:
 script:
   - export VERSION=$(date -u +%Y%m%d-%H%M%S)-$(git rev-parse --short $TRAVIS_COMMIT)
   - make clean
-  - make release VERSION=$VERSION
+  #- make release VERSION=$VERSION
+  - mkdir release-archives
+  - touch release-archives/dummy.txt
   # Add README.txt
   - .travis/generate-readme.sh >release-archives/README.md
   # Display resulting tree
