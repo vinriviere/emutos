@@ -445,9 +445,9 @@ static WORD setup_iconblks(const ICONBLK *ibstart, WORD count)
      * Finally we do the transforms
      */
     for (i = 0, p = maskstart; i < count; i++, p += num_bytes)
-        gsx_trans((LONG)p, iwb, (LONG)p, iwb, ih);
+        gsx_trans(p, iwb, p, iwb, ih);
     for (i = 0, p = datastart; i < count; i++, p += num_bytes)
-        gsx_trans((LONG)p, iwb, (LONG)p, iwb, ih);
+        gsx_trans(p, iwb, p, iwb, ih);
 
     return 0;
 }

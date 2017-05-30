@@ -64,7 +64,7 @@ typedef struct wsstr
 
 typedef struct fdbstr
 {
-        LONG            fd_addr;
+        void           *fd_addr;
         WORD            fd_w;
         WORD            fd_h;
         WORD            fd_wdwidth;
@@ -135,9 +135,9 @@ void gsx_gclip(GRECT *pt);
 void gsx_sclip(const GRECT *pt);
 void gsx_pline(WORD offx, WORD offy, WORD cnt, const WORD *pts);
 void gsx_attr(UWORD text, UWORD mode, UWORD color);
-void gsx_fix(FDB *pfd, LONG theaddr, WORD wb, WORD h);
+void gsx_fix(FDB *pfd, void *theaddr, WORD wb, WORD h);
 void bb_screen(WORD scrule, WORD scsx, WORD scsy, WORD scdx, WORD scdy, WORD scw, WORD sch);
-void gsx_trans(LONG saddr, UWORD swb, LONG daddr, UWORD dwb, UWORD h);
+void gsx_trans(void *saddr, UWORD swb, void *daddr, UWORD dwb, UWORD h);
 void gsx_start(void);
 void gsx_tblt(WORD tb_f, WORD x, WORD y, WORD tb_nc);
 void bb_fill(WORD mode, WORD fis, WORD patt, WORD hx, WORD hy, WORD hw, WORD hh);

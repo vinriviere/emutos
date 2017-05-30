@@ -42,7 +42,6 @@
 #include "gsx2.h"
 #include "rectfunc.h"
 #include "optimopt.h"
-#include "gemwmlib.h"
 #include "kprint.h"
 
 #include "string.h"
@@ -340,17 +339,6 @@ static void w_cpwalk(WORD wh, WORD obj, WORD depth, BOOL usetrue)
 
     w_bldactive(wh);
     do_walk(wh, gl_awind, obj, depth, &c);
-}
-
-
-static void w_strchg(WORD w_handle, WORD obj, BYTE *pstring)
-{
-    if (obj == W_NAME)
-        gl_aname.te_ptext = D.w_win[w_handle].w_pname = pstring;
-    else
-        gl_ainfo.te_ptext = D.w_win[w_handle].w_pinfo = pstring;
-
-    w_cpwalk(w_handle, obj, MAX_DEPTH, TRUE);
 }
 
 
@@ -1063,7 +1051,7 @@ static void wm_opcl(WORD wh, GRECT *pt, WORD isadd)
     GRECT   t;
 
     rc_copy(pt, &t);
-    wm_update(TRUE);
+    wm_update(BEG_UPDATE);
     if (isadd)
     {
         D.w_win[wh].w_flags |= VF_INTREE;
@@ -1077,7 +1065,7 @@ static void wm_opcl(WORD wh, GRECT *pt, WORD isadd)
     draw_change(wh, &t);
     if (isadd)
         w_setsize(WS_PREV, wh, pt);
-    wm_update(FALSE);
+    wm_update(END_UPDATE);
 }
 
 
@@ -1174,26 +1162,6 @@ void wm_get(WORD w_handle, WORD w_field, WORD *poutwds)
 }
 
 
-static WORD wm_gsizes(WORD w_field, WORD *psl, WORD *psz)
-{
-    if ((w_field == WF_HSLSIZ) || (w_field == WF_HSLIDE))
-    {
-        *psl = W_ACTIVE[W_HELEV].ob_x;
-        *psz = W_ACTIVE[W_HELEV].ob_width;
-        return W_HBAR;
-    }
-
-    if ((w_field == WF_VSLSIZ) || (w_field == WF_VSLIDE))
-    {
-        *psl = W_ACTIVE[W_VELEV].ob_y;
-        *psz = W_ACTIVE[W_VELEV].ob_height;
-        return W_VBAR;
-    }
-
-    return 0;
-}
-
-
 /*
  *  Routine to top a window and then make the right redraws happen
  */
@@ -1217,32 +1185,40 @@ static void wm_mktop(WORD w_handle)
 
 void wm_set(WORD w_handle, WORD w_field, WORD *pinwds)
 {
-    WORD    which;
-    WORD    wbar;
-    WORD    osl, osz, nsl, nsz;
-    GRECT   t;
+    WORD    gadget = -1;
     WINDOW  *pwin;
 
-    osl = osz = nsl = nsz = 0;
-    which = -1;
-
-    wm_update(TRUE);        /* grab the window sync */
+    wm_update(BEG_UPDATE);      /* grab the window sync */
 
     pwin = &D.w_win[w_handle];
-    wbar = wm_gsizes(w_field, &osl, &osz);
-    if (wbar)
+
+    /*
+     * validate input
+     */
+    switch(w_field)
     {
-        pinwds[0] = max(-1, pinwds[0]);
-        pinwds[0] = min(1000, pinwds[0]);
+    case WF_HSLSIZ:
+    case WF_VSLSIZ:
+        if (pinwds[0] == -1)    /* means "use default size" */
+            break;
+        /* drop thru */
+    case WF_HSLIDE:
+    case WF_VSLIDE:
+        if (pinwds[0] < 1)
+            pinwds[0] = 1;
+        else if (pinwds[0] > 1000)
+            pinwds[0] = 1000;
     }
 
     switch(w_field)
     {
     case WF_NAME:
-        which = W_NAME;
+        gl_aname.te_ptext = pwin->w_pname = *(BYTE **)pinwds;
+        gadget = W_NAME;
         break;
     case WF_INFO:
-        which = W_INFO;
+        gl_ainfo.te_ptext = pwin->w_pinfo = *(BYTE **)pinwds;
+        gadget = W_INFO;
         break;
     case WF_CXYWH:
         draw_change(w_handle, (GRECT *)pinwds);
@@ -1260,33 +1236,26 @@ void wm_set(WORD w_handle, WORD w_field, WORD *pinwds)
         break;
     case WF_HSLSIZ:
         pwin->w_hslsiz = pinwds[0];
+        gadget = W_HSLIDE;
         break;
     case WF_VSLSIZ:
         pwin->w_vslsiz = pinwds[0];
+        gadget = W_VSLIDE;
         break;
     case WF_HSLIDE:
         pwin->w_hslide = pinwds[0];
+        gadget = W_HSLIDE;
         break;
     case WF_VSLIDE:
         pwin->w_vslide = pinwds[0];
+        gadget = W_VSLIDE;
         break;
     }
 
-    if (wbar && (w_handle == gl_wtop))
-    {
-        w_bldactive(w_handle);
-        wm_gsizes(w_field, &nsl, &nsz);
-        if ((osl != nsl) || (osz != nsz))
-        {
-            w_getsize(WS_TRUE, w_handle, &t);
-            do_walk(w_handle, gl_awind, wbar + 3, MAX_DEPTH, &t);
-        }
-    }
+    if (gadget && (w_handle == gl_wtop))
+        w_cpwalk(w_handle, gadget, MAX_DEPTH, TRUE);
 
-    if (which != -1)
-        w_strchg(w_handle, which, *(BYTE **)pinwds);
-
-    wm_update(FALSE);       /* give up the sync */
+    wm_update(END_UPDATE);      /* give up the sync */
 }
 
 
@@ -1379,9 +1348,9 @@ void wm_new(void)
 
     /* Remove locks: */
     while(ml_ocnt > 0)
-        wm_update(2);                   /* END_MCTRL */
+        wm_update(END_MCTRL);
     while(wind_spb.sy_tas > 0)
-        wm_update(0);                   /* END_UPDATE */
+        wm_update(END_UPDATE);
 
     /* Delete windows: */
     for (wh = 1; wh < NUM_WIN; wh++)
