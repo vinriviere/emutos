@@ -66,7 +66,7 @@ typedef struct {
 } KEYTAB;
 
 #define abs(x) ( (x) < 0 ? -(x) : (x) )
-#define menu_text(tree,inum,ptext) (((tree)+(inum))->ob_spec = ptext)
+#define menu_text(tree,inum,ptext) (((tree)+(inum))->ob_spec = (LONG)ptext)
 
 
 #define ESC     0x1b
@@ -85,6 +85,7 @@ typedef struct {
  */
 #define VIEW_HAS_CHANGED    0x0001
 #define SORT_HAS_CHANGED    0x0002
+#define BACKGROUND_HAS_CHANGED  0x0004
 
 
 /*
@@ -121,7 +122,6 @@ static WORD     ig_close;
  *  there is one array of items to enable:
  *      ILL_OPENWIN[]   enabled if there is an open window
  *  and many arrays of items to disable:
- *      ILL_ITEM[]      always disabled
  *      ILL_NOWIN[]     disabled if there are no open windows
  *      ILL NOSEL[]     disabled if there are no icons selected
  *      ILL_MULTSEL[]   disabled if two or more icons are selected
@@ -133,7 +133,6 @@ static WORD     ig_close;
  *      ILL_FOLD[]      disabled if a folder is selected
  *      ILL_TRASH[]     disabled if the trash can is selected
  */
-static const BYTE     ILL_ITEM[] = {L1ITEM, L2ITEM, L3ITEM, L4ITEM, L5ITEM, 0};
 static const BYTE     ILL_FILE[] = {IDSKITEM,RICNITEM,0};
 static const BYTE     ILL_DOCU[] = {IDSKITEM,IAPPITEM,RICNITEM,0};
 static const BYTE     ILL_FOLD[] = {IDSKITEM,IAPPITEM,RICNITEM,0};
@@ -182,8 +181,8 @@ static const WORD  dura[]=
 #endif
 
 
-static LONG     ad_ptext;
-static LONG     ad_picon;
+static BYTE *ad_ptext;
+static BYTE *ad_picon;
 
 static int can_change_resolution;
 
@@ -230,7 +229,7 @@ static void desk_all(WORD flags)
     desk_wait(TRUE);
     if (flags & SORT_HAS_CHANGED)
         win_srtall();
-    if (flags)          /* either sort or view has changed */
+    if (flags & (VIEW_HAS_CHANGED|SORT_HAS_CHANGED))
         win_bdall();
     win_shwall();
     desk_wait(FALSE);
@@ -257,15 +256,25 @@ static void men_update(void)
     const BYTE *pvalue;
     ANODE *appl;
     OBJECT *tree = G.a_trees[ADMENU];
+    OBJECT *obj;
 
     pvalue = 0;
 
-    /* enable all items */
-    for (item = OPENITEM; item <= PREFITEM; item++)
-        menu_ienable(tree, item, 1);
-
-    /* disable some items */
-    men_list(tree, ILL_ITEM, FALSE);
+    /*
+     * disable separator strings, enable remaining menu items
+     */
+    for (obj = tree+OPENITEM; ; obj++)
+    {
+        if (obj->ob_type == G_STRING)
+        {
+            if (*(BYTE *)obj->ob_spec == '-')   /* must be a separator */
+                obj->ob_state |= DISABLED;
+            else
+                obj->ob_state &= ~DISABLED;
+        }
+        if (obj->ob_flags & LASTOB)
+            break;
+    }
 
     nsel = 0;
     for (item = 0; (item=win_isel(G.g_screen, G.g_croot, item)) != 0; nsel++)
@@ -327,6 +336,9 @@ static void men_update(void)
     menu_ienable(tree, CLIITEM, 0);
 #endif
 
+#if !CONF_WITH_BACKGROUNDS
+    menu_ienable(tree, BACKGRND, 0);
+#endif
 }
 
 
@@ -442,7 +454,7 @@ static WORD do_filemenu(WORD item)
 static WORD do_viewmenu(WORD item)
 {
     WORD newview, newsort, rc = 0;
-    LONG ptext;
+    BYTE *ptext;
 
     newview = G.g_iview;
     newsort = G.g_isort;
@@ -466,6 +478,12 @@ static WORD do_viewmenu(WORD item)
     case NSRTITEM:
         newsort = S_NSRT;
         break;
+#if CONF_WITH_BACKGROUNDS
+    case BACKGRND:
+        if (inf_backgrounds())
+            rc |= BACKGROUND_HAS_CHANGED;
+        break;
+#endif
     }
 
     if (newview != G.g_iview)
@@ -483,7 +501,7 @@ static WORD do_viewmenu(WORD item)
         rc |= SORT_HAS_CHANGED;
     }
 
-    if (rc)
+    if (rc & (VIEW_HAS_CHANGED|SORT_HAS_CHANGED))
         win_view(newview, newsort);
 
     return rc;
@@ -641,8 +659,8 @@ static WORD hndl_menu(WORD title, WORD item)
     case VIEWMENU:
         done = FALSE;
         rc = do_viewmenu(item);
-        if (rc)             /* if sort and/or view has changed,  */
-            desk_all(rc);   /* rebuild all windows appropriately */
+        if (rc)             /* if sort, view, or background has changed, */
+            desk_all(rc);   /* rebuild/show all windows as appropriate   */
         break;
     case OPTNMENU:
         done = do_optnmenu(item);

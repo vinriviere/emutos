@@ -149,7 +149,7 @@ GCCVERSION := $(shell $(CC) -dumpversion | cut -d. -f1)
 # add warning flags not supported by GCC v2
 ifneq (,$(GCCVERSION))
 ifneq (2,$(GCCVERSION))
-WARNFLAGS += -Wold-style-definition
+WARNFLAGS += -Wold-style-definition -Wtype-limits
 endif
 endif
 
