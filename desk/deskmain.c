@@ -132,20 +132,36 @@ static WORD     ig_close;
  *      ILL_DOCU[]      disabled if a normal non-executable file is selected
  *      ILL_FOLD[]      disabled if a folder is selected
  *      ILL_TRASH[]     disabled if the trash can is selected
+ *      ILL_ALWAYS[]    always disabled (contents vary according to configuration)
  */
-static const BYTE     ILL_FILE[] = {IDSKITEM,RICNITEM,0};
-static const BYTE     ILL_DOCU[] = {IDSKITEM,IAPPITEM,RICNITEM,0};
-static const BYTE     ILL_FOLD[] = {IDSKITEM,IAPPITEM,RICNITEM,0};
-static const BYTE     ILL_FDSK[] = {IAPPITEM,0};
-static const BYTE     ILL_HDSK[] = {IAPPITEM,0};
-static const BYTE     ILL_NOSEL[] = {OPENITEM,DELTITEM,
-                                IAPPITEM,RICNITEM,0};
-static const BYTE     ILL_MULTSEL[] = {OPENITEM, IDSKITEM, SHOWITEM, 0};
-static const BYTE     ILL_TRASH[] = {OPENITEM,DELTITEM,IDSKITEM,
-                                IAPPITEM,0};
-static const BYTE     ILL_NOWIN[] = {NFOLITEM,CLOSITEM,CLSWITEM,0};
-static const BYTE     ILL_OPENWIN[] = {SHOWITEM,NFOLITEM,CLOSITEM,CLSWITEM,ICONITEM,
-                                NAMEITEM,DATEITEM,SIZEITEM,TYPEITEM,0};
+static const BYTE ILL_FILE[] =  { IDSKITEM, RICNITEM, 0 };
+static const BYTE ILL_DOCU[] =  { IDSKITEM, IAPPITEM, RICNITEM, 0 };
+static const BYTE ILL_FOLD[] =  { IDSKITEM, IAPPITEM, RICNITEM, 0 };
+static const BYTE ILL_FDSK[] =  { IAPPITEM, 0 };
+static const BYTE ILL_HDSK[] =  { IAPPITEM, 0 };
+static const BYTE ILL_NOSEL[] = { OPENITEM, DELTITEM, IAPPITEM, RICNITEM, 0 };
+static const BYTE ILL_MULTSEL[] = { OPENITEM, IDSKITEM, SHOWITEM, 0 };
+static const BYTE ILL_TRASH[] = { OPENITEM, DELTITEM, IDSKITEM, IAPPITEM, 0 };
+static const BYTE ILL_NOWIN[] = { NFOLITEM, CLOSITEM, CLSWITEM, MASKITEM, 0 };
+static const BYTE ILL_OPENWIN[] = { SHOWITEM, NFOLITEM, CLOSITEM, CLSWITEM, MASKITEM,
+                                ICONITEM, NAMEITEM, DATEITEM, SIZEITEM, TYPEITEM, 0 };
+static const BYTE ILL_ALWAYS[] = {
+#if !CONF_WITH_FORMAT
+    FORMITEM,
+#endif
+#if !CONF_WITH_SHUTDOWN
+    QUITITEM,
+#endif
+#if WITH_CLI == 0
+    CLIITEM,
+#endif
+#if !CONF_WITH_BACKGROUNDS
+    BACKGRND,
+#endif
+#if !CONF_WITH_FILEMASK
+    MASKITEM,
+#endif
+    0 };
 
 /*
  * table to map the keyboard arrow character to the corresponding
@@ -322,22 +338,10 @@ static void men_update(void)
         men_list(tree, pvalue, FALSE);
     }
 
-#if !CONF_WITH_FORMAT
-    menu_ienable(tree, FORMITEM, 0);
-#endif
+    men_list(tree, ILL_ALWAYS, FALSE);
 
 #if CONF_WITH_SHUTDOWN
     menu_ienable(tree, QUITITEM, can_shutdown());
-#else
-    menu_ienable(tree, QUITITEM, 0);
-#endif
-
-#if WITH_CLI == 0
-    menu_ienable(tree, CLIITEM, 0);
-#endif
-
-#if !CONF_WITH_BACKGROUNDS
-    menu_ienable(tree, BACKGRND, 0);
 #endif
 }
 
@@ -404,7 +408,7 @@ static WORD do_filemenu(WORD item)
         if (curr)
             do_info(curr);
         else if (pw)
-            inf_disk(pw->w_path->p_spec[0]);
+            inf_disk(pw->w_pnode.p_spec[0]);
         break;
     case NFOLITEM:
         if (pw)
@@ -418,6 +422,12 @@ static WORD do_filemenu(WORD item)
         if (pw)
             fun_close(pw, CLOSE_WINDOW);
         break;
+#if CONF_WITH_FILEMASK
+    case MASKITEM:
+        if (pw)
+            fun_mask(pw);
+        break;
+#endif
     case DELTITEM:
         if (curr)
             fun_del(curr);
@@ -1080,7 +1090,7 @@ static void cnx_put(void)
         wind_get(pw->w_id,WF_CXYWH,&pws->x_save,&pws->y_save,&pws->w_save,&pws->h_save);
         do_xyfix(&pws->x_save,&pws->y_save);
         pws->vsl_save  = pw->w_cvrow;
-        strcpy(pws->pth_save,pw->w_path->p_spec);
+        strcpy(pws->pth_save,pw->w_pnode.p_spec);
         pws--;
     }
 }
@@ -1585,9 +1595,6 @@ WORD deskmain(void)
 
     /* initialize windows */
     win_start();
-
-    /* initialize folders, paths, and drives */
-    fpd_start();
 
     /* show menu */
     desk_verify(0, FALSE);                  /* should this be here  */
