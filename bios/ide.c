@@ -479,7 +479,7 @@ void detect_ide(void)
     has_ide = 0x00;
 #endif
 
-    KDEBUG(("detect_ide(): has_ide = 0x%02x\n",has_ide));
+    KINFO(("detect_ide(): has_ide = 0x%02x\n",has_ide));
 }
 
 /*
