@@ -617,6 +617,7 @@ static void ide_detect_devices(UWORD ifnum)
     UBYTE status;
     UWORD signature;
     int i;
+    UWORD w;
 
     MAYBE_UNUSED(interface);
 
@@ -635,7 +636,7 @@ static void ide_detect_devices(UWORD ifnum)
             KDEBUG(("IDE i/f %d device %d detected\n",ifnum,i));
         } else {
             info->dev[i].type = DEVTYPE_NONE;
-            KDEBUG(("IDE i/f %d device %d DEVTYPE_NONE signature=0x%04x\n",ifnum,i,signature));
+            KDEBUG(("IDE i/f %d device %d DEVTYPE_NONE sign=0x%04x\n",ifnum,i,signature));
         }
         info->dev[i].options = 0;
         info->dev[i].spi = 0;   /* changed if using READ/WRITE MULTIPLE */
@@ -649,9 +650,12 @@ static void ide_detect_devices(UWORD ifnum)
     for (i = 0; i < 2; i++) {
         IDE_WRITE_HEAD(interface,IDE_DEVICE(i));
         DELAY_400NS;
-        if (IDE_READ_SECTOR_NUMBER_SECTOR_COUNT(interface) == 0x0101) {
+        w = IDE_READ_SECTOR_NUMBER_SECTOR_COUNT(interface);
+        KDEBUG(("dev=%d w=0x%04x\n", i, w));
+        if (w == 0x0101) {
             status = IDE_READ_STATUS(interface);
             signature = IDE_READ_CYLINDER_HIGH_CYLINDER_LOW(interface);
+            KDEBUG(("dev=%d status=0x%02x signature=0x%04x\n", i, status, signature));
             info->dev[i].type = ide_decode_type(status,signature);
         }
     }
