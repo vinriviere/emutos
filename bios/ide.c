@@ -17,7 +17,7 @@
  * Note: this driver does not support CHS addressing.
  */
 
-/* #define ENABLE_KDEBUG */
+#define ENABLE_KDEBUG
 
 #include "emutos.h"
 #include "asm.h"
@@ -629,11 +629,14 @@ static void ide_detect_devices(UWORD ifnum)
         IDE_WRITE_SECTOR_NUMBER_SECTOR_COUNT(interface,0xaa,0x55);
         IDE_WRITE_SECTOR_NUMBER_SECTOR_COUNT(interface,0x55,0xaa);
         IDE_WRITE_SECTOR_NUMBER_SECTOR_COUNT(interface,0xaa,0x55);
-        if (IDE_READ_SECTOR_NUMBER_SECTOR_COUNT(interface) == 0xaa55) {
+        signature = IDE_READ_SECTOR_NUMBER_SECTOR_COUNT(interface);
+        if (signature == 0xaa55) {
             info->dev[i].type = DEVTYPE_UNKNOWN;
             KDEBUG(("IDE i/f %d device %d detected\n",ifnum,i));
-        } else
+        } else {
             info->dev[i].type = DEVTYPE_NONE;
+            KDEBUG(("IDE i/f %d device %d DEVTYPE_NONE signature=0x%04x\n",ifnum,i,signature));
+        }
         info->dev[i].options = 0;
         info->dev[i].spi = 0;   /* changed if using READ/WRITE MULTIPLE */
     }
@@ -855,7 +858,10 @@ static LONG ide_read(UBYTE cmd,UWORD ifnum,UWORD dev,ULONG sector,UWORD count,UB
     KDEBUG(("ide_read(0x%02x, %u, %u, %lu, %u, %p, %d)\n", cmd, ifnum, dev, sector, count, buffer, need_byteswap));
 
     if (ide_select_device(interface,dev) < 0)
+    {
+        KDEBUG(("ide_select_device() failed.\n"));
         return EREADF;
+    }
 
     /*
      * if READ SECTOR and MULTIPLE MODE, set cmd & spi accordingly
@@ -1165,6 +1171,9 @@ static LONG ide_identify(WORD dev)
 
     ifnum = dev / 2;    /* i.e. primary IDE, secondary IDE, ... */
     ifdev = dev & 1;    /* 0 or 1 */
+
+if (ifnum > 0)
+    return EUNDEV;
 
     KDEBUG(("ide_identify(%d [ifnum=%d ifdev=%d])\n", dev, ifnum, ifdev));
 
