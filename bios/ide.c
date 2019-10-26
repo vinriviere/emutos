@@ -257,7 +257,7 @@ struct IFINFO {
 
 /* timing stuff */
 
-#ifdef MACHINE_AMIGA
+#if 0//def MACHINE_AMIGA
 /* Amiga already provides proper delay at bus level, no need for more */
 #define DELAY_400NS     NULL_FUNCTION()
 #else
