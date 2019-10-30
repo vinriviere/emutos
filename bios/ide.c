@@ -265,7 +265,6 @@ struct IFINFO {
 #endif
 
 #define DELAY_5US       delay_loop(delay5us)
-#define DELAY_EXTRA     delay_loop(delay200us)
 
 #define SHORT_TIMEOUT   (CLOCKS_PER_SEC/10) /* 100ms */
 #define XFER_TIMEOUT    (CLOCKS_PER_SEC)    /* 1000ms for data xfer */
@@ -275,7 +274,6 @@ static int has_ide;
 static struct IFINFO ifinfo[NUM_IDE_INTERFACES];
 static ULONG delay400ns;
 static ULONG delay5us;
-static ULONG delay200us;
 static struct {
     UWORD filler00[27];
     char model_number[40];
@@ -499,7 +497,6 @@ void ide_init(void)
 
     delay400ns = loopcount_1_msec / 2500;
     delay5us = loopcount_1_msec / 200;
-    delay200us = loopcount_1_msec / 5;
 
     if (!has_ide)
         return;
@@ -551,7 +548,6 @@ static int wait_for_signature(volatile struct IDE *interface,LONG timeout)
     UWORD n;
 
     DELAY_400NS;
-    DELAY_EXTRA;
     while(hz_200 < next) {
         n = IDE_READ_SECTOR_NUMBER_SECTOR_COUNT(interface);
         if (n == 0x0101)
@@ -573,7 +569,6 @@ static void ide_reset(UWORD ifnum)
     DELAY_5US;
     IDE_WRITE_CONTROL(interface,IDE_CONTROL_nIEN);
     DELAY_400NS;
-    DELAY_EXTRA;
 
     /* if device 0 exists, wait for it to clear BSY */
     if (info->dev[0].type != DEVTYPE_NONE) {
@@ -632,13 +627,9 @@ static void ide_detect_devices(UWORD ifnum)
     for (i = 0; i < 2; i++) {
         IDE_WRITE_HEAD(interface,IDE_DEVICE(i));
         DELAY_400NS;
-        DELAY_EXTRA;
         IDE_WRITE_SECTOR_NUMBER_SECTOR_COUNT(interface,0xaa,0x55);
-        DELAY_EXTRA;
         IDE_WRITE_SECTOR_NUMBER_SECTOR_COUNT(interface,0x55,0xaa);
-        DELAY_EXTRA;
         IDE_WRITE_SECTOR_NUMBER_SECTOR_COUNT(interface,0xaa,0x55);
-        DELAY_EXTRA;
         signature = IDE_READ_SECTOR_NUMBER_SECTOR_COUNT(interface);
         if (signature == 0xaa55) {
             info->dev[i].type = DEVTYPE_UNKNOWN;
@@ -659,7 +650,6 @@ static void ide_detect_devices(UWORD ifnum)
     for (i = 0; i < 2; i++) {
         IDE_WRITE_HEAD(interface,IDE_DEVICE(i));
         DELAY_400NS;
-        DELAY_EXTRA;
         w = IDE_READ_SECTOR_NUMBER_SECTOR_COUNT(interface);
         KDEBUG(("dev=%d w=0x%04x\n", i, w));
         if (w == 0x0101) {
@@ -691,7 +681,6 @@ static int wait_for_not_BSY(volatile struct IDE *interface,LONG timeout)
     KDEBUG(("wait_for_not_BSY(%p, %ld)\n", interface, timeout));
 
     DELAY_400NS;
-    DELAY_EXTRA;
     while(hz_200 < next) {
         if ((IDE_READ_ALT_STATUS(interface) & IDE_STATUS_BSY) == 0)
             return 0;
