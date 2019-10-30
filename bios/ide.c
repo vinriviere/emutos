@@ -120,11 +120,11 @@ struct IDE
     { i->cylinder_high = HIBYTE(a); i->cylinder_low = LOBYTE(a); }
 #define IDE_WRITE_COMMAND_HEAD(i,a,b) \
     { i->head = b; i->command = a; }
-#define IDE_WRITE_CONTROL(i,a)    i->control = a
+#define IDE_WRITE_CONTROL(i,a)    (void)a;
 #define IDE_WRITE_HEAD(i,a)       i->head = a
 
 #define IDE_READ_STATUS(i)        i->command
-#define IDE_READ_ALT_STATUS(i)    i->control
+#define IDE_READ_ALT_STATUS(i)    IDE_READ_STATUS(i)
 #define IDE_READ_ERROR(i)         i->features
 #define IDE_READ_SECTOR_NUMBER_SECTOR_COUNT(i) \
     MAKE_UWORD(i->sector_number, i->sector_count)
@@ -632,7 +632,7 @@ static void ide_detect_devices(UWORD ifnum)
         IDE_WRITE_SECTOR_NUMBER_SECTOR_COUNT(interface,0xaa,0x55);
         signature = IDE_READ_SECTOR_NUMBER_SECTOR_COUNT(interface);
         if (signature == 0xaa55) {
-            info->dev[i].type = DEVTYPE_UNKNOWN;
+            info->dev[i].type = DEVTYPE_ATA; //DEVTYPE_UNKNOWN;
             KDEBUG(("IDE i/f %d device %d detected\n",ifnum,i));
         } else {
             info->dev[i].type = DEVTYPE_NONE;
@@ -642,6 +642,7 @@ static void ide_detect_devices(UWORD ifnum)
         info->dev[i].spi = 0;   /* changed if using READ/WRITE MULTIPLE */
     }
 
+#if 0
     /* recheck after soft reset, also detect ata/atapi */
     IDE_WRITE_HEAD(interface,IDE_DEVICE(0));
     DELAY_400NS;
@@ -659,6 +660,7 @@ static void ide_detect_devices(UWORD ifnum)
             info->dev[i].type = ide_decode_type(status,signature);
         }
     }
+#endif
 
     for (i = 0; i < 2; i++)
         KDEBUG(("IDE i/f %d device %d is type %d\n",ifnum,i,info->dev[i].type));
