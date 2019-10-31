@@ -493,7 +493,7 @@ void machine_detect(void)
     detect_blitter();
 #endif
 #if CONF_WITH_IDE
-//    detect_ide();
+    detect_ide();
 #endif
 #if CONF_WITH_SCSI
     detect_scsi();

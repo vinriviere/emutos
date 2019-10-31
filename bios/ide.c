@@ -17,7 +17,7 @@
  * Note: this driver does not support CHS addressing.
  */
 
-#define ENABLE_KDEBUG
+/* #define ENABLE_KDEBUG */
 
 #include "emutos.h"
 #include "asm.h"
@@ -479,7 +479,7 @@ void detect_ide(void)
     has_ide = 0x00;
 #endif
 
-    KINFO(("detect_ide(): has_ide = 0x%02x\n",has_ide));
+    KDEBUG(("detect_ide(): has_ide = 0x%02x\n",has_ide));
 }
 
 /*
@@ -617,7 +617,6 @@ static void ide_detect_devices(UWORD ifnum)
     UBYTE status;
     UWORD signature;
     int i;
-    UWORD w;
 
     MAYBE_UNUSED(interface);
 
@@ -634,10 +633,8 @@ static void ide_detect_devices(UWORD ifnum)
         if (signature == 0xaa55) {
             info->dev[i].type = DEVTYPE_ATA; //DEVTYPE_UNKNOWN;
             KDEBUG(("IDE i/f %d device %d detected\n",ifnum,i));
-        } else {
+        } else
             info->dev[i].type = DEVTYPE_NONE;
-            KDEBUG(("IDE i/f %d device %d DEVTYPE_NONE sign=0x%04x\n",ifnum,i,signature));
-        }
         info->dev[i].options = 0;
         info->dev[i].spi = 0;   /* changed if using READ/WRITE MULTIPLE */
     }
@@ -651,12 +648,9 @@ static void ide_detect_devices(UWORD ifnum)
     for (i = 0; i < 2; i++) {
         IDE_WRITE_HEAD(interface,IDE_DEVICE(i));
         DELAY_400NS;
-        w = IDE_READ_SECTOR_NUMBER_SECTOR_COUNT(interface);
-        KDEBUG(("dev=%d w=0x%04x\n", i, w));
-        if (w == 0x0101) {
+        if (IDE_READ_SECTOR_NUMBER_SECTOR_COUNT(interface) == 0x0101) {
             status = IDE_READ_STATUS(interface);
             signature = IDE_READ_CYLINDER_HIGH_CYLINDER_LOW(interface);
-            KDEBUG(("dev=%d status=0x%02x signature=0x%04x\n", i, status, signature));
             info->dev[i].type = ide_decode_type(status,signature);
         }
     }
@@ -864,10 +858,7 @@ static LONG ide_read(UBYTE cmd,UWORD ifnum,UWORD dev,ULONG sector,UWORD count,UB
     KDEBUG(("ide_read(0x%02x, %u, %u, %lu, %u, %p, %d)\n", cmd, ifnum, dev, sector, count, buffer, need_byteswap));
 
     if (ide_select_device(interface,dev) < 0)
-    {
-        KDEBUG(("ide_select_device() failed.\n"));
         return EREADF;
-    }
 
     /*
      * if READ SECTOR and MULTIPLE MODE, set cmd & spi accordingly
@@ -1177,9 +1168,6 @@ static LONG ide_identify(WORD dev)
 
     ifnum = dev / 2;    /* i.e. primary IDE, secondary IDE, ... */
     ifdev = dev & 1;    /* 0 or 1 */
-
-if (ifnum > 0)
-    return EUNDEV;
 
     KDEBUG(("ide_identify(%d [ifnum=%d ifdev=%d])\n", dev, ifnum, ifdev));
 

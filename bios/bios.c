@@ -70,7 +70,6 @@
 #if WITH_CLI
 #include "../cli/clistub.h"
 #endif
-#include "ide.h"
 
 
 
@@ -340,11 +339,6 @@ static void bios_init(void)
     init_acia_vecs();   /* Init the ACIA interrupt vector and related stuff */
     KDEBUG(("after init_acia_vecs()\n"));
     boot_status |= MIDI_AVAILABLE;  /* track progress */
-
-    KINFO(("has_gayle = %d\n", has_gayle));
-#if CONF_WITH_IDE
-    detect_ide();
-#endif
 
     /* Now we can enable the interrupts.
      * We need a timer for DMA timeouts in floppy and harddisk initialisation.
@@ -646,7 +640,7 @@ void biosmain(void)
 #else
     show_initinfo = FIRST_BOOT;
 #endif
-bconin2();
+
     if (show_initinfo)
         bootdev = initinfo(&shiftbits); /* show the welcome screen */
     else

@@ -27,7 +27,6 @@
 #include "scsi.h"
 #include "sd.h"
 #include "../bdos/bdosstub.h"
-#include "ikbd.h"
 
 /*==== Defines ============================================================*/
 
@@ -100,7 +99,6 @@ static void disk_init_one(UWORD unit,LONG *devices_available)
             return;
         }
         KINFO(("unit %d is managed by EmuTOS internal drivers: %s\n", unit, productname));
-        bconin2();
     }
 
     /* try to update with real capacity & blocksize */
