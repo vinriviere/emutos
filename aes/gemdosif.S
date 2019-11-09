@@ -390,9 +390,6 @@ _drawrat:
         rts                     // Jump to vector stored in _drwaddr
 
 _tikcod:
-        move    sr,d0
-        move.w  d0,tiksr
-        move    #0x2300,sr      // Prevent the VBL int on Amiga
         move.l  sp,tstksave
         lea     tstack,sp
         tst.l   _CMP_TICK
@@ -411,8 +408,6 @@ L2234:
         addq.l  #2,sp
         movea.l tstksave,sp
         move.l  _tiksav,-(sp)
-        move.w  tiksr,d0
-        move    d0,sr
         rts                     // Jump to vector stored in _tiksav
 
 SECTION_RODATA
@@ -435,9 +430,6 @@ err_tbl_end:
         .equ    err_tbl_last,(err_tbl_end-err_tbl)
 
 .bss
-
-tiksr:
-        .ds.w    1
 
 savesr:
         .ds.w    1
