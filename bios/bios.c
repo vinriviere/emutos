@@ -116,7 +116,7 @@ void (*vector_5ms)(void);       /* 200 Hz system timer */
 
 static void vecs_init(void)
 {
-#if !CONF_ATARI_HARDWARE
+#if !CONF_ATARI_HARDWARE && !defined(MACHINE_HB68K08)
     /* On Atari hardware, the first 2 longs of the address space are physically
      * routed to the start of the ROM (instead of the start of the ST-RAM).
      * On other machines, there is actual RAM at that place.
@@ -336,6 +336,7 @@ static void bios_init(void)
     KDEBUG(("screen_init_address()\n"));
     screen_init_address();
 
+    KDEBUG(("vt52_init()\n"));
     vt52_init();        /* initialize the vt52 console */
 
     /* Now kcprintf() will also send debug info to the screen */
@@ -812,10 +813,12 @@ void biosmain(void)
     shutdown();
 #endif
 
+#if PANIC_TO_SCREEN
     /* hide cursor */
     cprintf("\033f");
+#endif
 
-    kcprintf(_("System halted!\n"));
+    paprintf(_("System halted!\n"));
     halt();
 }
 

@@ -116,6 +116,9 @@ not_a_tt:
 //   a3.l: old _ramtop (#if CONF_WITH_TTRAM)
 memchk:
         // We must determine the ST-RAM settings in some way.
+#ifdef MACHINE_HB68K08
+        jra     memconf                 // always config memory
+#endif
         // If EmuTOS lives in RAM, always assume that settings of previous OS
         // are correct, and never call memconf.
         // memconf would trash the RAM including EmuTOS itself, anyway.
@@ -185,7 +188,7 @@ memory_reused:
 #endif
         jra     stram_detected
 
-#if !EMUTOS_LIVES_IN_RAM
+#if !EMUTOS_LIVES_IN_RAM || defined(MACHINE_HB68K08)
 
 // ===========================================================================
 // ==== memconf - Detect RAM and configure the memory controller =============

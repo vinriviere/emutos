@@ -69,6 +69,8 @@ extern WORD trap_save_area[];
 
 /* MFP interrupt vectors */
 #define VEC_MFP6   (*(volatile PFVOID*)0x118) /* MFP level 6 interrupt vector */
+#define VEC_MFP8   (*(volatile PFVOID*)0x120) /* MFP level 8 interrupt vector */
+#define VEC_MFP12  (*(volatile PFVOID*)0x130) /* MFP level 12 interrupt vector */
 
 #if CONF_WITH_SCC
 /* SCC interrupt vectors, default addresses */

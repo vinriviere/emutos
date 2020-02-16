@@ -271,7 +271,11 @@ WORD initinfo(ULONG *pshiftbits)
 #endif
     int i;
     WORD olddev, dev = bootdev;
+#ifdef MACHINE_HB68K08
+    long stramsize = (long)phystop - 0x00060000;
+#else
     long stramsize = (long)phystop;
+#endif
 #if CONF_WITH_ALT_RAM
     long altramsize = total_alt_ram();
 #endif
@@ -320,6 +324,8 @@ WORD initinfo(ULONG *pshiftbits)
     pair_start(_("CPU type"));
 #ifdef __mcoldfire__
     cprintf("ColdFire V4e");
+#elif defined(MACHINE_HB68K08)
+    cprintf("M68008");
 #else
 # if CONF_WITH_APOLLO_68080
     if (is_apollo_68080)

@@ -76,6 +76,9 @@ SECTIONS
 #include "tosvars.ld"
         . = 0x800; /* Extend sysvars area upto end of supervisor-only RAM */
         sysvars_end = .;
+#ifdef MACHINE_HB68K08
+        . = 0x00060000;
+#endif
     } >stram
 
 #if CONF_WITH_STATIC_ALT_RAM
@@ -107,9 +110,11 @@ SECTIONS
         obj/lowstram.o(.bss COMMON)
         obj/lineavars.o(.bss COMMON)
         __low_stram_end = .;
+#ifndef MACHINE_HB68K08
         ASSERT(ABSOLUTE(_shifty) < 0x8000, "error: bad _shifty address");
         ASSERT((ABSOLUTE(_dskbuf) & 3) == 0, "error: bad _dskbuf alignment");
         ASSERT(ABSOLUTE(__low_stram_end) <= 0x8000, "error: .low_stram section extends beyond 32k");
+#endif
     } >stram
 
     /* The TEXT segment contains EmuTOS executable code and read-only data.

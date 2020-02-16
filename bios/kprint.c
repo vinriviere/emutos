@@ -33,6 +33,7 @@
 #include "ikbd.h"
 #include "midi.h"
 #include "amiga.h"
+#include "hb68k08.h"
 
 #define DISPLAY_INSTRUCTION_AT_PC   0   /* set to 1 for extra info from dopanic() */
 #define DISPLAY_STACK               0   /* set to 1 for extra info from dopanic() */
@@ -141,6 +142,17 @@ static void kprintf_outc_coldfire_rs232(int c)
 }
 #endif
 
+#if HB68K08_DEBUG_PRINT
+static void kprintf_outc_hb68k08_rs232(int c)
+{
+    /* Raw terminals usually require CRLF */
+    if ( c == '\n')
+        hb68k08_usart_write_byte('\r');
+
+    hb68k08_usart_write_byte((char)c);
+}
+#endif
+
 static int vkprintf(const char *fmt, va_list ap)
 {
 #if CONSOLE_DEBUG_PRINT
@@ -190,6 +202,10 @@ static int vkprintf(const char *fmt, va_list ap)
 
 #if COLDFIRE_DEBUG_PRINT
     return doprintf(kprintf_outc_coldfire_rs232, fmt, ap);
+#endif
+
+#if HB68K08_DEBUG_PRINT
+    return doprintf(kprintf_outc_hb68k08_rs232, fmt, ap);
 #endif
 
 #if MIDI_DEBUG_PRINT
@@ -292,12 +308,14 @@ void dopanic(const char *fmt, ...)
 
     MAYBE_UNUSED(sr);
 
+#if PANIC_TO_SCREEN
     /* hide cursor, new line, new line */
     cprintf("\033f\033v\n\n");
     /* TODO use sane screen settings (color, address) */
+#endif
 
     if (proc_lives != 0x12345678) {
-        kcprintf("No saved info in dopanic: halted\n");
+        paprintf("No saved info in dopanic: halted\n");
         halt();
     }
     if (proc_enum == 0) { /* Call to panic(const char *fmt, ...) */
@@ -313,7 +331,7 @@ void dopanic(const char *fmt, ...)
         pc = s->pc;
         sr = 0x2700; /* was already set in panic(); too late to get original value */
 
-        kcprintf("pc=%08lx\n",
+        paprintf("pc=%08lx\n",
                  (ULONG)s->pc);
 #ifdef __mcoldfire__
     } else {
@@ -328,19 +346,19 @@ void dopanic(const char *fmt, ...)
         sr = s->sr;
 
         if (proc_enum >= 2 && proc_enum < ARRAY_SIZE(exc_messages)) {
-            kcprintf("Panic: %s\n",
+            paprintf("Panic: %s\n",
                      exc_messages[proc_enum]);
         } else {
-            kcprintf("Panic: Exception number %d\n",
+            paprintf("Panic: Exception number %d\n",
                      (int) proc_enum);
         }
 
-        kcprintf("fw=%04x (fmt=%d vec=%d fault=%d)\n",
+        paprintf("fw=%04x (fmt=%d vec=%d fault=%d)\n",
                  s->format_word,
                  (s->format_word & 0xf000) >> 12,
                  (s->format_word & 0x03fc) >> 2,
                  (s->format_word & 0x0c00) >> 8 | (s->format_word & 0x0003));
-        kcprintf("sr=%04x pc=%08lx\n",
+        paprintf("sr=%04x pc=%08lx\n",
                  s->sr, (ULONG)s->pc);
     }
 #else
@@ -357,11 +375,11 @@ void dopanic(const char *fmt, ...)
         pc = s->pc;
         sr = s->sr;
 
-        kcprintf("Panic: %s\n",
+        paprintf("Panic: %s\n",
                  exc_messages[proc_enum]);
-        kcprintf("misc=%04x opcode=%04x\n",
+        paprintf("misc=%04x opcode=%04x\n",
                  s->misc, s->opcode);
-        kcprintf("addr=%08lx sr=%04x pc=%08lx\n",
+        paprintf("addr=%08lx sr=%04x pc=%08lx\n",
                  (ULONG)s->address, s->sr, (ULONG)s->pc);
 #if CONF_WITH_ADVANCED_CPU
     } else if (mcpu == 10 && (proc_enum == 2 || proc_enum == 3)) {
@@ -384,11 +402,11 @@ void dopanic(const char *fmt, ...)
         pc = s->pc;
         sr = s->sr;
 
-        kcprintf("Panic: %s\n",
+        paprintf("Panic: %s\n",
                  exc_messages[proc_enum]);
-        kcprintf("fw=%04x ssw=%04x\n",
+        paprintf("fw=%04x ssw=%04x\n",
                  s->format_word, s->special_status_word);
-        kcprintf("addr=%08lx sr=%04x pc=%08lx\n",
+        paprintf("addr=%08lx sr=%04x pc=%08lx\n",
                  (ULONG)s->fault_address, s->sr, (ULONG)s->pc);
     } else if ((mcpu == 20 || mcpu == 30) && (proc_enum == 2 || proc_enum == 3)) {
         /* 68020/68030 Bus or Address Error */
@@ -411,11 +429,11 @@ void dopanic(const char *fmt, ...)
         pc = s->pc;
         sr = s->sr;
 
-        kcprintf("Panic: %s\n",
+        paprintf("Panic: %s\n",
                  exc_messages[proc_enum]);
-        kcprintf("fw=%04x ir=%04x ssr=%04x\n",
+        paprintf("fw=%04x ir=%04x ssr=%04x\n",
                  s->format_word, s->internal_register, s->special_status_register);
-        kcprintf("addr=%08lx sr=%04x pc=%08lx\n",
+        paprintf("addr=%08lx sr=%04x pc=%08lx\n",
                  (ULONG)s->data_cycle_fault_address, s->sr, (ULONG)s->pc);
     } else if (mcpu == 40 && proc_enum == 2) {
         /* 68040 Bus Error */
@@ -433,11 +451,11 @@ void dopanic(const char *fmt, ...)
         pc = s->pc;
         sr = s->sr;
 
-        kcprintf("Panic: %s\n",
+        paprintf("Panic: %s\n",
                  exc_messages[proc_enum]);
-        kcprintf("fw=%04x ea=%08lx ssw=%04x\n",
+        paprintf("fw=%04x ea=%08lx ssw=%04x\n",
                  s->format_word, (ULONG)s->effective_address, s->special_status_word);
-        kcprintf("addr=%08lx sr=%04x pc=%08lx\n",
+        paprintf("addr=%08lx sr=%04x pc=%08lx\n",
                  (ULONG)s->fault_address, s->sr, (ULONG)s->pc);
     } else if ((mcpu == 40 && proc_enum == 3)
                || (mcpu == 60 && (proc_enum == 2 || proc_enum == 3))) {
@@ -452,11 +470,11 @@ void dopanic(const char *fmt, ...)
         pc = s->pc;
         sr = s->sr;
 
-        kcprintf("Panic: %s\n",
+        paprintf("Panic: %s\n",
                  exc_messages[proc_enum]);
-        kcprintf("fw=%04x\n",
+        paprintf("fw=%04x\n",
                  s->format_word);
-        kcprintf("addr=%08lx sr=%04x pc=%08lx\n",
+        paprintf("addr=%08lx sr=%04x pc=%08lx\n",
                  (ULONG)s->address, s->sr, (ULONG)s->pc);
 #endif  /* CONF_WITH_ADVANCED_CPU */
     } else if (proc_enum < ARRAY_SIZE(exc_messages)) {
@@ -468,9 +486,9 @@ void dopanic(const char *fmt, ...)
         pc = s->pc;
         sr = s->sr;
 
-        kcprintf("Panic: %s\n",
+        paprintf("Panic: %s\n",
                  exc_messages[proc_enum]);
-        kcprintf("sr=%04x pc=%08lx\n",
+        paprintf("sr=%04x pc=%08lx\n",
                  s->sr, (ULONG)s->pc);
     } else {
         struct {
@@ -481,9 +499,9 @@ void dopanic(const char *fmt, ...)
         pc = s->pc;
         sr = s->sr;
 
-        kcprintf("Panic: Exception number %d\n",
+        paprintf("Panic: Exception number %d\n",
                  (int) proc_enum);
-        kcprintf("sr=%04x pc=%08lx\n",
+        paprintf("sr=%04x pc=%08lx\n",
                  s->sr, (ULONG)s->pc);
     }
 #endif
@@ -496,7 +514,7 @@ void dopanic(const char *fmt, ...)
      */
     if (!IS_ODD_POINTER(pc))    /* precaution if running on 68000 */
     {
-        kcprintf("Instruction at PC: %04x %04x %04x\n",
+        paprintf("Instruction at PC: %04x %04x %04x\n",
                  pc[0], pc[1], pc[2]);
     }
 #endif
@@ -509,36 +527,36 @@ void dopanic(const char *fmt, ...)
     wrap = v_stat_0 & M_CEOL;       /* remember line wrap status */
     v_stat_0 &= ~M_CEOL;            /*  & disable it             */
 
-    kcprintf("\nD0-3:%s%08lx %08lx %08lx %08lx\n",
+    paprintf("\nD0-3:%s%08lx %08lx %08lx %08lx\n",
              start, proc_dregs[0], proc_dregs[1], proc_dregs[2], proc_dregs[3]);
-    kcprintf("D4-7:%s%08lx %08lx %08lx %08lx\n",
+    paprintf("D4-7:%s%08lx %08lx %08lx %08lx\n",
              start, proc_dregs[4], proc_dregs[5], proc_dregs[6], proc_dregs[7]);
-    kcprintf("A0-3:%s%08lx %08lx %08lx %08lx\n",
+    paprintf("A0-3:%s%08lx %08lx %08lx %08lx\n",
              start, proc_aregs[0], proc_aregs[1], proc_aregs[2], proc_aregs[3]);
-    kcprintf("A4-7:%s%08lx %08lx %08lx %08lx\n",
+    paprintf("A4-7:%s%08lx %08lx %08lx %08lx\n",
              start, proc_aregs[4], proc_aregs[5], proc_aregs[6], proc_aregs[7]);
-    kcprintf(" USP:%s%08lx\n\n",
+    paprintf(" USP:%s%08lx\n\n",
              start,proc_usp);
 
 #if DISPLAY_STACK
-    kcprintf("Stack: %04x %04x %04x %04x\n",
+    paprintf("Stack: %04x %04x %04x %04x\n",
              proc_stk[0], proc_stk[1], proc_stk[2], proc_stk[3]);
-    kcprintf("       %04x %04x %04x %04x\n",
+    paprintf("       %04x %04x %04x %04x\n",
              proc_stk[4], proc_stk[5], proc_stk[6], proc_stk[7]);
-    kcprintf("       %04x %04x %04x %04x\n",
+    paprintf("       %04x %04x %04x %04x\n",
              proc_stk[8], proc_stk[9], proc_stk[10], proc_stk[11]);
-    kcprintf("       %04x %04x %04x %04x\n\n",
+    paprintf("       %04x %04x %04x %04x\n\n",
              proc_stk[12], proc_stk[13], proc_stk[14], proc_stk[15]);
     if (!(sr & 0x2000) && ((proc_usp & 1) == 0))
     {
         const UWORD *user_stk = (const UWORD *)proc_usp;
-        kcprintf("USP  : %04x %04x %04x %04x\n",
+        paprintf("USP  : %04x %04x %04x %04x\n",
                  user_stk[0], user_stk[1], user_stk[2], user_stk[3]);
-        kcprintf("       %04x %04x %04x %04x\n",
+        paprintf("       %04x %04x %04x %04x\n",
                  user_stk[4], user_stk[5], user_stk[6], user_stk[7]);
-        kcprintf("       %04x %04x %04x %04x\n",
+        paprintf("       %04x %04x %04x %04x\n",
                  user_stk[8], user_stk[9], user_stk[10], user_stk[11]);
-        kcprintf("       %04x %04x %04x %04x\n\n",
+        paprintf("       %04x %04x %04x %04x\n\n",
                  user_stk[12], user_stk[13], user_stk[14], user_stk[15]);
     }
 #endif
@@ -548,14 +566,15 @@ void dopanic(const char *fmt, ...)
 
     if (run)
     {
-        kcprintf("basepage=%08lx\n",
+        paprintf("basepage=%08lx\n",
                  (ULONG)run);
-        kcprintf("text=%08lx data=%08lx bss=%08lx\n",
+        paprintf("text=%08lx data=%08lx bss=%08lx\n",
                  (ULONG)run->p_tbase, (ULONG)run->p_dbase, (ULONG)run->p_bbase);
         if (pc && ((UBYTE *)pc >= run->p_tbase) && ((UBYTE *)pc < (run->p_tbase + run->p_tlen)))
-            kcprintf("Crash at text+%08lx\n", (UBYTE *)pc - run->p_tbase);
+            paprintf("Crash at text+%08lx\n", (UBYTE *)pc - run->p_tbase);
     }
 
+#if PANIC_TO_SCREEN
     /* allow interrupts so we get keypresses */
 #if CONF_WITH_ATARI_VIDEO
     set_sr(0x2300);
@@ -567,6 +586,7 @@ void dopanic(const char *fmt, ...)
     cprintf(_("\n*** Press any key to continue ***"));
     bconin2();
     cprintf("\n");
+#endif /* PANIC_TO_SCREEN */
 
     savptr = (LONG) trap_save_area; /* in case running program has altered it */
 

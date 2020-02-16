@@ -33,7 +33,7 @@
 /*
  * Determine if this EmuTOS is built for ROM or RAM
  */
-#if defined(TARGET_PRG) || defined(TARGET_FLOPPY) || defined(TARGET_AMIGA_FLOPPY) || defined(TARGET_LISA_FLOPPY)
+#if defined(TARGET_PRG) || defined(TARGET_FLOPPY) || defined(TARGET_AMIGA_FLOPPY) || defined(TARGET_LISA_FLOPPY) || defined(MACHINE_HB68K08)
 #  define EMUTOS_LIVES_IN_RAM 1
 # else
 #  define EMUTOS_LIVES_IN_RAM 0
@@ -557,6 +557,24 @@
 # endif
 # ifndef AES_STACK_SIZE
 #  define AES_STACK_SIZE 2048   /* in LONGs */
+# endif
+#endif
+
+/*
+ * Defaults for the HB68K08 machine
+ */
+#ifdef MACHINE_HB68K08
+# ifndef CONF_ATARI_HARDWARE
+#  define CONF_ATARI_HARDWARE 0
+# endif
+# ifndef CONF_STRAM_SIZE
+#  define CONF_STRAM_SIZE (0x00060000 + 512UL*1024)
+# endif
+# ifndef CONF_SERIAL_CONSOLE
+#  define CONF_SERIAL_CONSOLE 1
+# endif
+# ifndef ALWAYS_SHOW_INITINFO
+#  define ALWAYS_SHOW_INITINFO 1
 # endif
 #endif
 
@@ -1456,6 +1474,20 @@
 # endif
 #endif
 
+/*
+ * Define this to 1 if panic messages must go to the screen
+ * in addition to standard debug output.
+ * This is discouraged when CONF_SERIAL_CONSOLE is enabled because
+ * it causes duplicate lines in the console.
+ */
+#define PANIC_TO_SCREEN (!CONF_SERIAL_CONSOLE)
+
+/* Use paprintf() to display panic messages */
+#if PANIC_TO_SCREEN
+# define paprintf kcprintf
+#else
+# define paprintf kprintf
+#endif
 
 
 /************************************
@@ -1687,7 +1719,7 @@
  * or for real hardware.
  */
 #ifndef RS232_DEBUG_PRINT
-# if CONF_SERIAL_CONSOLE && !CONF_WITH_COLDFIRE_RS232
+# if CONF_SERIAL_CONSOLE && !CONF_WITH_COLDFIRE_RS232 && !defined(MACHINE_HB68K08)
 #  define RS232_DEBUG_PRINT 1
 # else
 #  define RS232_DEBUG_PRINT 0
@@ -1715,6 +1747,17 @@
 #endif
 
 /*
+ * Set HB68K08_DEBUG_PRINT to 1 to redirect debug prints to the HB68K08 serial port
+ */
+#ifndef HB68K08_DEBUG_PRINT
+# if defined(MACHINE_HB68K08) && CONF_SERIAL_CONSOLE
+#  define HB68K08_DEBUG_PRINT 1
+# else
+#  define HB68K08_DEBUG_PRINT 0
+# endif
+#endif
+
+/*
  * Set MIDI_DEBUG_PRINT to 1 to redirect debug prints to MIDI out.  This
  * is useful for an emulator without any native debug print capabilities,
  * or for real hardware. This overrides previous debug print settings.
@@ -1724,7 +1767,7 @@
 #endif
 
 /* Determine if kprintf() is available */
-#if CONF_WITH_UAE || DETECT_NATIVE_FEATURES || STONX_NATIVE_PRINT || CONSOLE_DEBUG_PRINT || RS232_DEBUG_PRINT || SCC_DEBUG_PRINT || COLDFIRE_DEBUG_PRINT || MIDI_DEBUG_PRINT
+#if CONF_WITH_UAE || DETECT_NATIVE_FEATURES || STONX_NATIVE_PRINT || CONSOLE_DEBUG_PRINT || RS232_DEBUG_PRINT || SCC_DEBUG_PRINT || COLDFIRE_DEBUG_PRINT || HB68K08_DEBUG_PRINT || MIDI_DEBUG_PRINT
 #  define HAS_KPRINTF 1
 # else
 #  define HAS_KPRINTF 0
@@ -1928,8 +1971,8 @@
 # endif
 #endif
 
-#if (CONSOLE_DEBUG_PRINT + RS232_DEBUG_PRINT + SCC_DEBUG_PRINT + COLDFIRE_DEBUG_PRINT + MIDI_DEBUG_PRINT) > 1
-# error Only one of CONSOLE_DEBUG_PRINT, RS232_DEBUG_PRINT, SCC_DEBUG_PRINT, COLDFIRE_DEBUG_PRINT or MIDI_DEBUG_PRINT must be set to 1.
+#if (CONSOLE_DEBUG_PRINT + RS232_DEBUG_PRINT + SCC_DEBUG_PRINT + COLDFIRE_DEBUG_PRINT + HB68K08_DEBUG_PRINT + MIDI_DEBUG_PRINT) > 1
+# error Only one of CONSOLE_DEBUG_PRINT, RS232_DEBUG_PRINT, SCC_DEBUG_PRINT, COLDFIRE_DEBUG_PRINT, HB68K08_DEBUG_PRINT or MIDI_DEBUG_PRINT must be set to 1.
 #endif
 
 

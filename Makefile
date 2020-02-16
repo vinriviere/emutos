@@ -275,6 +275,7 @@ bios_src +=  memory.S processor.S vectors.S aciavecs.S bios.c xbios.c acsi.c \
              pmmu030.c 68040_pmmu.S \
              amiga.c amiga2.S spi_vamp.c \
              lisa.c lisa2.S \
+             hb68k08.c hb68k08asm.S \
              delay.c delayasm.S sd.c memory2.c bootparams.c scsi.c nova.c \
              dsp.c dsp2.S
 
@@ -668,10 +669,11 @@ amigakd: amiga
 
 TOCLEAN += *.s19
 SRECFILE = emutos.s19
-LMA = $(error LMA must be set)
+LMA = $(call MAKE_SYMADDR,__text,emutos.map)
+ENTRY = $(call MAKE_SYMADDR,_main,emutos.map)
 
 $(SRECFILE): emutos.img
-	$(OBJCOPY) -I binary -O srec --change-addresses $(LMA) $< $(SRECFILE)
+	$(OBJCOPY) -I binary -O srec --srec-len=32 --change-section-lma *=$(LMA) --change-start $(ENTRY) $< $(SRECFILE)
 
 CPUFLAGS_FIREBEE = -mcpu=5474
 SREC_FIREBEE = emutosfb.s19
@@ -732,6 +734,23 @@ m548x-bas:
 	@MEMBOT=$(call SHELL_SYMADDR,__end_os_stram,emutos.map);\
 	echo "# RAM used: $$(($$MEMBOT)) bytes ($$(($$MEMBOT - $(MEMBOT_TOS404))) bytes more than TOS 4.04)"
 	@printf "$(LOCALCONFINFO)"
+
+#
+# HB68K08 images
+#
+
+SREC_HB68K08 = emutos-hb68k08.s19
+
+.PHONY: hb68k08
+NODEP += hb68k08
+hb68k08: UNIQUE = $(COUNTRY)
+hb68k08: override DEF += -DMACHINE_HB68K08
+hb68k08: WITH_AES = 0
+hb68k08:
+	@echo "# Building HB68K08 EmuTOS in $(SREC_HB68K08)"
+	$(MAKE) CPUFLAGS='$(CPUFLAGS)' DEF='$(DEF)' UNIQUE=$(UNIQUE) WITH_AES=$(WITH_AES) SRECFILE=$(SREC_HB68K08) $(SREC_HB68K08)
+	@MEMBOT=$(call SHELL_SYMADDR,__end_os_stram,emutos.map);\
+	echo "# RAM used: $$(($$MEMBOT)) bytes"
 
 #
 # Special variants of EmuTOS running in RAM instead of ROM.

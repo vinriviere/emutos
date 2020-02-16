@@ -337,7 +337,7 @@ void *xmgetblk(WORD memtype)
          */
         if ((j >= 2) || (free_available_dnds() == 0))
         {
-            kcprintf(_("\033EOut of internal memory.\nUse FOLDR100.PRG to get more.\nSystem halted!\n"));
+            paprintf(_("\033EOut of internal memory.\nUse FOLDR100.PRG to get more.\nSystem halted!\n"));
             halt();                         /*  halt system                  */
         }
     }

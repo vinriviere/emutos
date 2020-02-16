@@ -40,6 +40,7 @@
 #include "nova.h"
 #include "biosext.h"
 #include "amiga.h"
+#include "hb68k08.h"
 
 #if CONF_WITH_ADVANCED_CPU
 UBYTE is_bus32; /* 1 if address bus is 32-bit, 0 if it is 24-bit */
@@ -638,6 +639,10 @@ void machine_init(void)
     }
  #endif
 #endif /* CONF_WITH_RESET */
+
+#ifdef MACHINE_HB68K08
+    hb68k08_machine_init();
+#endif
 }
 
 void fill_cookie_jar(void)
@@ -802,6 +807,8 @@ const char * machine_name(void)
     MAYBE_UNUSED(guess_machine_name);
 #ifdef MACHINE_FIREBEE
     return "FireBee";
+#elif defined(MACHINE_HB68K08)
+    return "HB68K08";
 #elif defined(MACHINE_AMIGA)
     return amiga_machine_name();
 #elif defined(MACHINE_LISA)

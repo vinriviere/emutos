@@ -105,10 +105,10 @@ _init_exc_vec:
         clr.l   _proc_lives.w
         lea     deflt_vec_table, a0
         lea     8, a1
-        move.l  #61, d0
+        move.l  #61+16, d0
 set_vec:
         move.l  a0, (a1)+
-        add.l   #2, a0
+        addq.l  #4, a0
 #ifdef __mcoldfire__
         subq.l  #1, d0
         jpl     set_vec
@@ -122,8 +122,8 @@ buggy_jit_save_registers_before_bus_error:
 /* initialize the 192 user vectors. */
 _init_user_vec:
         lea     user_vec, a0
-        lea     256, a1
-        move.l  #191, d0
+        lea     256+4*16, a1
+        move.l  #191-16, d0
 set_uvec:
         move.l  a0, (a1)+
 #ifdef __mcoldfire__
@@ -145,71 +145,89 @@ set_uvec:
  */
 deflt_vec_table:
 buserr_vec:
-        bsr.s   any_vec         // vector 2
-        bsr.s   any_vec
+        bsr.w   any_vec         // vector 2
+        bsr.w   any_vec
 illg_vec:
-        bsr.s   any_vec
-        bsr.s   any_vec         // vector 5
-        bsr.s   any_vec
-        bsr.s   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec         // vector 5
+        bsr.w   any_vec
+        bsr.w   any_vec
 priv_vec:
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec         // vector 10
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec         // vector 15
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec         // vector 20
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec         // vector 25
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec         // vector 30
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec         // vector 35
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec         // vector 40
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec         // vector 45
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec         // vector 50
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec         // vector 55
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec         // vector 60
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec         // vector 10
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec         // vector 15
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec         // vector 20
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec         // vector 25
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec         // vector 30
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec         // vector 35
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec         // vector 40
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec         // vector 45
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec         // vector 50
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec         // vector 55
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec         // vector 60
 unimp_vec:
-        bsr.s   any_vec
-        bsr.s   any_vec
-        bsr.s   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+
+// MFP vectors
+        bsr.w   any_vec
+        bsr.w   any_vec         // vector 65
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec         // vector 70
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec         // vector 75
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
+        bsr.w   any_vec
 
 user_vec:
         pea     deflt_vec_table(pc)
@@ -236,7 +254,7 @@ any_vec:
         move.l  sp,(_proc_aregs+28).w
         lea     deflt_vec_table(pc), a0
         sub.l   a0, d0
-        lsr.l   #1, d0
+        lsr.l   #2, d0
         add.l   #1, d0
         move.l  d0, _proc_enum.w
 

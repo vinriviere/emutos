@@ -28,6 +28,7 @@
 #include "coldfire.h"
 #include "amiga.h"
 #include "ikbd.h"
+#include "hb68k08.h"
 
 /*
  * defines
@@ -267,6 +268,8 @@ LONG bcostat1(void)
 {
 #if CONF_WITH_COLDFIRE_RS232
     return coldfire_rs232_can_write() ? -1 : 0;
+#elif defined(MACHINE_HB68K08)
+    return hb68k08_usart_can_write() ? -1 : 0;
 #elif CONF_WITH_MFP_RS232
     IOREC *out = &iorec1.out;
 
@@ -285,6 +288,9 @@ LONG bconout1(WORD dev, WORD b)
 
 #if CONF_WITH_COLDFIRE_RS232
     coldfire_rs232_write_byte(b);
+    return 1;
+#elif defined(MACHINE_HB68K08)
+    hb68k08_usart_write_byte(b);
     return 1;
 #elif CONF_WITH_MFP_RS232
     put_iorecbuf(MFP_BASE, &iorec1.out, b);
@@ -875,6 +881,10 @@ void init_serport(void)
 
 #ifdef MACHINE_AMIGA
     amiga_rs232_init();
+#endif
+
+#ifdef MACHINE_HB68K08
+    hb68k08_usart_init();
 #endif
 
 #if !CONF_SERIAL_IKBD

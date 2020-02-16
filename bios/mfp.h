@@ -15,7 +15,7 @@
 #ifndef MFP_H
 #define MFP_H
 
-#if CONF_WITH_MFP || CONF_WITH_TT_MFP
+#if CONF_WITH_MFP || CONF_WITH_TT_MFP || defined(MACHINE_HB68K08)
 
 /*==== MFP memory mapping =================================================*/
 typedef struct
