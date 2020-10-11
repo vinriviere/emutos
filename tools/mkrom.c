@@ -36,7 +36,8 @@ typedef enum
     CMD_STC,
     CMD_AMIGA,
     CMD_AMIGA_KICKDISK,
-    CMD_AMIGA_FLOPPY
+    CMD_AMIGA_FLOPPY,
+    CMD_MAC
 } CMD_TYPE;
 
 /* Global variables */
@@ -75,6 +76,21 @@ static void write_big_endian_long(uint32_t* p, uint32_t value)
     u.b[3] = value;
 
     *p = u.l;
+}
+
+/* Read a big endian short */
+static uint32_t read_big_endian_short(const uint16_t* p)
+{
+    union
+    {
+        uint16_t s;
+        uint8_t b[2];
+    } u;
+
+    u.s = *p;
+
+    return ((uint16_t)u.b[0]) << 8
+         |  (uint16_t)u.b[1];
 }
 
 /* Write a big endian short */
@@ -673,6 +689,102 @@ static int cmd_amiga_floppy(FILE* bootfile, const char* bootfilename,
     return 1;
 }
 
+/* Compute the checksum of a Macintosh ROM */
+static int compute_mac_checksum(FILE* file, const char* filename, size_t filesize, uint32_t* pchecksum)
+{
+    uint16_t big_endian_val;
+    uint16_t value;
+    uint32_t checksum = 0;
+    size_t nread;
+    int err; /* Seek error */
+    size_t offset = sizeof(uint32_t); /* Checksum is the first LONG of the ROM */
+
+    /* Rewind to the start of the file, after the checksum location */
+    err = fseek(file, offset, SEEK_SET);
+    if (err != 0)
+    {
+        fprintf(stderr, "%s: %s: %s\n", g_argv0, filename, strerror(errno));
+        return 0;
+    }
+
+    while (offset < filesize)
+    {
+        nread = fread(&big_endian_val, sizeof big_endian_val, 1, file);
+        if (nread == 0)
+        {
+            if (ferror(file))
+            {
+                fprintf(stderr, "%s: %s: %s\n", g_argv0, filename, strerror(errno));
+                return 0;
+            }
+            else
+            {
+                fprintf(stderr, "%s: %s: premature end of file.\n", g_argv0, filename);
+                return 0;
+            }
+        }
+
+        offset += sizeof big_endian_val;
+
+        value = read_big_endian_short(&big_endian_val);
+        checksum += value;
+    }
+
+    *pchecksum = checksum;
+    return 1;
+}
+
+/* Macintosh ROM image */
+static int cmd_mac(FILE* infile, const char* infilename,
+                   FILE* outfile, const char* outfilename)
+{
+    size_t nwrite;
+    size_t source_size;
+    size_t target_size = 128 * 1024;
+    size_t free_size;
+    int ret; /* boolean return value: 0 == error, 1 == OK */
+    int err; /* Seek error */
+    uint32_t checksum;
+    uint32_t big_endian_long;
+
+    printf("# Padding %s to %ld KB Macintosh ROM image into %s\n", infilename, ((long)target_size) / 1024, outfilename);
+
+    /* Append the ROM data and pad it with zeros */
+    ret = append_and_pad(infile, infilename, outfile, outfilename, target_size, &source_size);
+    if (!ret)
+        return ret;
+
+    /* Compute the checksum */
+    ret = compute_mac_checksum(outfile, outfilename, target_size, &checksum);
+    if (!ret)
+        return ret;
+#if DBG_MKROM
+    printf("# checksum before fixup = 0x%08lx\n", (unsigned long)checksum);
+#endif
+
+    /* Seek to the checksum location */
+    err = fseek(outfile, 0, SEEK_SET);
+    if (err != 0)
+    {
+        fprintf(stderr, "%s: %s: %s\n", g_argv0, outfilename, strerror(errno));
+        return 0;
+    }
+
+    /* Write the checksum */
+    write_big_endian_long(&big_endian_long, checksum);
+    nwrite = fwrite(&big_endian_long, 1, sizeof big_endian_long, outfile);
+    if (nwrite != sizeof big_endian_long)
+    {
+        fprintf(stderr, "%s: %s: %s\n", g_argv0, outfilename, strerror(errno));
+        return 0;
+    }
+
+    free_size = target_size - source_size;
+    printf("# %s done (%lu bytes free)\n", outfilename, (unsigned long)free_size);
+
+    return 1;
+}
+
 /* Main program */
 int main(int argc, char* argv[])
 {
@@ -732,6 +844,13 @@ int main(int argc, char* argv[])
         bootfilename = argv[2];
         infilename = argv[3];
         outfilename = argv[4];
+        outmode = "w+b"; /* Computing the checksum requires read/write */
+    }
+    else if (argc == 4 && !strcmp(argv[1], "mac"))
+    {
+        op = CMD_MAC;
+        infilename = argv[2];
+        outfilename = argv[3];
         outmode = "w+b"; /* Computing the checksum requires read/write */
     }
     else
@@ -808,6 +927,10 @@ int main(int argc, char* argv[])
 
         case CMD_AMIGA_FLOPPY:
             ret = cmd_amiga_floppy(bootfile, bootfilename, infile, infilename, outfile, outfilename);
+        break;
+
+        case CMD_MAC:
+            ret = cmd_mac(infile, infilename, outfile, outfilename);
         break;
 
         default:

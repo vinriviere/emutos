@@ -709,6 +709,8 @@ ULONG initial_vram_size(void)
 {
 #ifdef MACHINE_AMIGA
     return amiga_initial_vram_size();
+#elif defined(MACHINE_MAC)
+    return 22784;
 #else
     ULONG vram_size;
 
@@ -763,6 +765,10 @@ void screen_get_current_mode_info(UWORD *planes, UWORD *hz_rez, UWORD *vt_rez)
 
 #ifdef MACHINE_AMIGA
     amiga_get_current_mode_info(planes, hz_rez, vt_rez);
+#elif defined(MACHINE_MAC)
+    *planes = 1;
+    *hz_rez = 512;
+    *vt_rez = 342;
 #else
     atari_get_current_mode_info(planes, hz_rez, vt_rez);
 #endif

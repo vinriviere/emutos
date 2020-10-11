@@ -706,6 +706,7 @@ void biosmain(void)
 #else
     show_initinfo = FIRST_BOOT;
 #endif
+    show_initinfo = FALSE;
 
     if (show_initinfo)
         bootdev = initinfo(&shiftbits); /* show the welcome screen */

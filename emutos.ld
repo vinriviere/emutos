@@ -22,6 +22,8 @@ OUTPUT_FORMAT(binary)
 /* The ROM address depends on the target */
 #if defined (MACHINE_AMIGA)
 # define ROM_ORIGIN 0x00fc0000
+#elif defined (MACHINE_MAC)
+# define ROM_ORIGIN 0x00400000
 #elif defined (TARGET_CART)
 # define ROM_ORIGIN 0x00fa0000
 #elif defined (TARGET_192)

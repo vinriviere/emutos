@@ -347,6 +347,11 @@ _realmain:
         move.w  #0x0000,0xffff8606.w
 #endif
 
+#ifdef MACHINE_MAC
+        bclr    #4,0xeffffe     // Turn off ROM low-memory overlay
+        move.b  #0x7f,0xefe7fe  // Set VIA register A direction
+#endif
+
 #ifdef MACHINE_AMIGA
         // It is *mandatory* to call this as soon as possible,
         // to do early initialization of the Amiga hardware.

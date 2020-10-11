@@ -517,6 +517,40 @@
 #endif
 
 /*
+ * Defaults for the Macintosh ROM target
+ */
+#ifdef TARGET_MAC_ROM
+# define MACHINE_MAC
+#endif
+
+/*
+ * Defaults for the Macintosh machine
+ */
+#ifdef MACHINE_MAC
+# ifndef CONF_ATARI_HARDWARE
+#  define CONF_ATARI_HARDWARE 0
+# endif
+# ifndef CONF_STRAM_SIZE
+#  define CONF_STRAM_SIZE 1*1024*1024
+# endif
+# ifndef USE_STOP_INSN_TO_FREE_HOST_CPU
+#  define USE_STOP_INSN_TO_FREE_HOST_CPU 0 /* STOP instruction is not supported by Mini vMac */
+# endif
+# ifndef CONF_WITH_RESET
+#  define CONF_WITH_RESET 0
+# endif
+# ifndef CONF_WITH_ADVANCED_CPU
+#  define CONF_WITH_ADVANCED_CPU 0
+# endif
+# ifndef CONF_WITH_APOLLO_68080
+#  define CONF_WITH_APOLLO_68080 0
+# endif
+# ifndef CONF_WITH_CACHE_CONTROL
+#  define CONF_WITH_CACHE_CONTROL 0
+# endif
+#endif
+
+/*
  * By default, EmuTOS is built for Atari ST/TT/Falcon compatible hardware
  */
 #ifndef CONF_ATARI_HARDWARE
@@ -1331,7 +1365,7 @@
  * - use exclusively the serial port for console input.
  */
 #ifndef CONF_SERIAL_CONSOLE
-# if !CONF_WITH_ATARI_VIDEO && !defined(MACHINE_AMIGA)
+# if !CONF_WITH_ATARI_VIDEO && !(defined(MACHINE_AMIGA) || defined(MACHINE_MAC))
 #  define CONF_SERIAL_CONSOLE 1
 # else
 #  define CONF_SERIAL_CONSOLE 0

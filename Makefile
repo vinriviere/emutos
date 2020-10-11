@@ -688,6 +688,28 @@ m548x-bas:
 	echo "# RAM used: $$(($$MEMBOT)) bytes ($$(($$MEMBOT - $(MEMBOT_TOS404))) bytes more than TOS 4.04)"
 
 #
+# Macintosh
+#
+
+ROM_MAC = emutos-mac.rom
+MAC_DEFS =
+
+.PHONY: mac
+NODEP += mac
+mac: UNIQUE = $(COUNTRY)
+mac: OPTFLAGS = $(SMALL_OPTFLAGS)
+mac: override DEF += -DTARGET_MAC_ROM $(MAC_DEFS)
+mac: WITH_AES = 0
+mac:
+	@echo "# Building Macintosh EmuTOS into $(ROM_MAC)"
+	$(MAKE) CPUFLAGS='$(CPUFLAGS)' DEF='$(DEF)' OPTFLAGS='$(OPTFLAGS)' UNIQUE=$(UNIQUE) WITH_AES=$(WITH_AES) ROM_MAC=$(ROM_MAC) $(ROM_MAC)
+	@MEMBOT=$(call SHELL_SYMADDR,__end_os_stram,emutos.map);\
+	echo "# RAM used: $$(($$MEMBOT)) bytes ($$(($$MEMBOT - $(MEMBOT_TOS206))) bytes more than TOS 2.06)"
+
+$(ROM_MAC): emutos.img mkrom
+	./mkrom mac $< $(ROM_MAC)
+
+#
 # Special variants of EmuTOS running in RAM instead of ROM.
 # In this case, emutos.img needs to be loaded into RAM by some loader.
 #
