@@ -1615,7 +1615,7 @@
  * Set CONSOLE_DEBUG_PRINT to 1 to redirect debug prints to the BIOS console
  */
 #ifndef CONSOLE_DEBUG_PRINT
-# define CONSOLE_DEBUG_PRINT 0
+# define CONSOLE_DEBUG_PRINT 1
 #endif
 
 /*

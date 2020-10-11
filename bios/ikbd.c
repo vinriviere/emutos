@@ -40,6 +40,7 @@
 #ifdef MACHINE_AMIGA
 #include "amiga.h"
 #endif
+#include "mac.h"
 
 
 /* forward declarations */
@@ -1065,6 +1066,8 @@ void kbd_init(void)
 
 #ifdef MACHINE_AMIGA
     amiga_kbd_init();
+#elif defined(MACHINE_MAC)
+    mac_kbd_init();
 #endif
 
     /* initialize the IKBD */
