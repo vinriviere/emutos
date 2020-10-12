@@ -35,9 +35,16 @@
 
 void mac_kbd_init(void)
 {
-    VIA_PCR = 0xff;
-    //VEC_LEVEL1 = mac_int_1;
-    VIA_IER |= (VIA_IRQ_BIT_SET | VIA_IRQ_BIT_KEYBOARD_CLOCK | VIA_IRQ_BIT_KEYBOARD_DATA_BIT);
+    VEC_LEVEL1 = mac_int_1;
+    VIA_IER = VIA_IRQ_BIT_SET | VIA_IRQ_BIT_VERTICAL_BLANK;
+}
+
+/******************************************************************************/
+/* Extra VBL                                                                  */
+/******************************************************************************/
+
+void mac_extra_vbl(void)
+{
 }
 
 #endif /* MACHINE_MAC */

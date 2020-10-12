@@ -16,6 +16,7 @@
 #ifdef MACHINE_MAC
 
 void mac_kbd_init(void);
+void mac_extra_vbl(void);
 
 /* The following functions are defined in mac2.S */
 
