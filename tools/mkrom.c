@@ -740,7 +740,7 @@ static int cmd_mac(FILE* infile, const char* infilename,
 {
     size_t nwrite;
     size_t source_size;
-    size_t target_size = 128 * 1024;
+    size_t target_size = 256 * 1024;
     size_t free_size;
     int ret; /* boolean return value: 0 == error, 1 == OK */
     int err; /* Seek error */
