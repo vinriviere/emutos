@@ -350,7 +350,7 @@ _realmain:
 #ifdef MACHINE_MAC
         bclr    #4,0xeffffe     // Turn off ROM low-memory overlay
         move.b  #0x7f,0xefe7fe  // Set VIA register A direction
-
+        move.b  #0x87,0xefe5fe  // Set VIA register B direction
 // Defeat Mini vMac patches
         jra     after_patches
         .rept   2048

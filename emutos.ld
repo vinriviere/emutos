@@ -77,6 +77,9 @@ SECTIONS
         /* System variables are located at fixed addresses */
 #include "tosvars.ld"
         . = 0x800; /* Extend sysvars area upto end of supervisor-only RAM */
+#ifdef MACHINE_MAC
+        . = 0x900; /* Defeat Mini vMac patches */
+#endif
         sysvars_end = .;
     } >stram
 
