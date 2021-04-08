@@ -1,4 +1,4 @@
-/*
+/*Z
  * 68040_pmmu.S - MMU initialization for 68040 (taken from set_mmu.prg).
  *
  * Copyright 2013-2019 by Odd Skancke and Miro Kropáček.
